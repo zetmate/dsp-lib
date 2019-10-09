@@ -9,7 +9,7 @@ public:
     }
     
     CircularBuffer (int numChannels, int numSamples)
-    : AudioBuffer<Type> (numChannels, numSamples)
+        : AudioBuffer<Type> (numChannels, numSamples)
     {
     }
     
