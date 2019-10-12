@@ -4,11 +4,11 @@
 class FDThread
 {
 public:
-    FDThread (FDAction* fdAction)
+    FDThread (int fftOrder, int fftSize, int fftDataSize, FDAction* fdAction)
     :   forwardFFT (fftOrder),
         inverseFFT (fftOrder),
         windowF (fftSize, dsp::WindowingFunction<float>::hann),
-        windowB (fftSize, dsp::WindowingFunction<float>::hann),
+        windowI (fftSize, dsp::WindowingFunction<float>::hann),
         action (fdAction)
     {
     }
@@ -64,7 +64,7 @@ private:
     };
     
     dsp::FFT forwardFFT, inverseFFT;
-    dsp::WindowingFunction<float> windowF, windowB;
+    dsp::WindowingFunction<float> windowF, windowI;
     
     float fifo [fftSize];
     float fftData [fftDataSize];

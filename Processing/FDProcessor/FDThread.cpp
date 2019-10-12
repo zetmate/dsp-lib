@@ -3,10 +3,15 @@
 
 void FDThread::processSampleMono (float input, float& output)
 {
+    // reset flag
+    resourcesReleased = false;
 }
 
 void FDThread::processSampleStereo (float inputL, float inputR, float& outputL, float& outputR)
 {
+    // reset flag
+    resourcesReleased = false;
+    
     // Update counters
     if (c > fftSize - 1)
     {
@@ -36,8 +41,8 @@ void FDThread::processSampleStereo (float inputL, float inputR, float& outputL, 
             fftData[bin] = imagOut;
         }
         
+        windowI.multiplyWithWindowingTable(fftData, fftSize);
         inverseFFT.performRealOnlyInverseTransform(fftData);
-        windowF.multiplyWithWindowingTable(fftData, fftSize);
         
         for (int i = 0; i < fftSize; i++)
         {
