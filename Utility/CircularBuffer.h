@@ -1,3 +1,4 @@
+#pragma once
 #include "../JuceLibraryCode/JuceHeader.h"
 
 /** Circular buffer */
