@@ -4,21 +4,27 @@
 class FDThread
 {
 public:
-    FDThread (int fftOrder, int fftSize, int fftDataSize, FDAction* fdAction)
-    :   forwardFFT (fftOrder),
-        inverseFFT (fftOrder),
+    FDThread (int fftOrder_, FDAction* fdAction)
+    :
+        fftOrder(fftOrder_),
+        fftSize (1 << fftOrder),
+        fftDataSize (fftSize * 2),
+        forwardFFT (fftOrder_),
+        inverseFFT (fftOrder_),
         windowF (fftSize, dsp::WindowingFunction<float>::hann),
         windowI (fftSize, dsp::WindowingFunction<float>::hann),
         action (fdAction)
     {
     }
     
+    FDThread (const FDThread&) = delete;
+
     virtual ~FDThread()
     {
     }
     
     // Prepare for play function
-    void prepare()
+    void prepare (double newSampleRate, int bufferSize)
     {
         // releaseResources
         releaseResources();
@@ -28,6 +34,7 @@ public:
     {
         if (!resourcesReleased)
         {
+            // Clear buffers
             clearBuffers();
             
             // Reset counters
@@ -56,21 +63,22 @@ private:
     bool resourcesReleased = false;
     
     // FFT
-    enum
-    {
-        fftOrder = 9,
-        fftSize = 1 << fftOrder,
-        fftDataSize = fftSize * 2
-    };
+    static const int maxFFTOrder = 12;
+    static const int maxFFTSize = 1 << maxFFTOrder;
+
+    int fftOrder = 10;
+    int fftSize = 1 << fftOrder;
+    int fftDataSize = fftSize * 2;
     
     dsp::FFT forwardFFT, inverseFFT;
     dsp::WindowingFunction<float> windowF, windowI;
     
-    float fifo [fftSize];
-    float fftData [fftDataSize];
-    float outputData [fftSize];
+    float fifo[maxFFTSize];
+    float fftData[maxFFTSize * 2];
+    float outputData[maxFFTSize];
+
     int fifoIndex = 0;
-    int c = 0; // counter
+    int c = 0;
     bool nextFFTBlockReady = false;
     
     // action

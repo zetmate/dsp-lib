@@ -12,6 +12,7 @@ public:
     {
     }
     
+    // Pure virtual
     virtual void processMono (const float realIn, const float imagIn,
                               float& realOut, float& imagOut) = 0;
     
@@ -20,7 +21,21 @@ public:
                                 float& realOutL, float& realOutR,
                                 float& imagOutL, float& imagOutR ) = 0;
 
-private:
+    // Virtual
+    virtual void prepare (double newSampleRate, int bufferSize)
+    {
+    }
+
+    virtual void releaseResources()
+    {
+        resourcesReleased = true;
+    }
+
+protected:
+    // Properties
+    bool resourcesReleased = false;
+
+    // Methods
     const Complex getMagnitude (float real, float imag)
     {
         return sqrtf(powf(real, 2) + powf(imag, 2));
