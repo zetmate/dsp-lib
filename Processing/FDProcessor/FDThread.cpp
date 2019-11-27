@@ -26,8 +26,8 @@ void FDThread::processSampleStereo (float inputL, float inputR, float& outputL, 
     {
         nextFFTBlockReady = false;
         
-        windowF.multiplyWithWindowingTable (fftData, fftSize);
-        forwardFFT.performRealOnlyForwardTransform(fftData);
+        windowF->multiplyWithWindowingTable (fftData, fftSize);
+        forwardFFT->performRealOnlyForwardTransform(fftData);
         
         for (int bin = 0; bin < fftSize; bin++)
         {
@@ -41,8 +41,8 @@ void FDThread::processSampleStereo (float inputL, float inputR, float& outputL, 
             fftData[bin] = imagOut;
         }
         
-        windowI.multiplyWithWindowingTable(fftData, fftSize);
-        inverseFFT.performRealOnlyInverseTransform(fftData);
+        windowI->multiplyWithWindowingTable(fftData, fftSize);
+        inverseFFT->performRealOnlyInverseTransform(fftData);
         
         for (int i = 0; i < fftSize; i++)
         {
@@ -50,7 +50,7 @@ void FDThread::processSampleStereo (float inputL, float inputR, float& outputL, 
         }
     }
     
-    // Output the signal
+    // Output signal
     outputL = outputData[c];
     outputR = outputData[c];
     

@@ -4,13 +4,11 @@
 class FDAction
 {
 public:
-    FDAction()
-    {
-    }
+    FDAction() = default;
     
-    virtual ~FDAction()
-    {
-    }
+    FDAction (const FDAction&) = delete;
+    
+    virtual ~FDAction() = default;
     
     // Pure virtual
     virtual void processMono (const float realIn, const float imagIn,
@@ -29,6 +27,12 @@ public:
     virtual void releaseResources()
     {
         resourcesReleased = true;
+    }
+    
+    // Getters
+    FDAction* getPointerToMe()
+    {
+        return this;
     }
 
 protected:

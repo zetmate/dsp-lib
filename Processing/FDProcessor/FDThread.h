@@ -1,31 +1,29 @@
 #pragma once
 #include "FDAction.h"
+#include "constants.h"
 
 class FDThread
 {
 public:
+    FDThread() = default;
+    
     FDThread (int fftOrder_, FDAction* fdAction)
-    :
-        fftOrder(fftOrder_),
-        fftSize (1 << fftOrder),
-        fftDataSize (fftSize * 2),
-        forwardFFT (fftOrder_),
-        inverseFFT (fftOrder_),
-        windowF (fftSize, dsp::WindowingFunction<float>::hann),
-        windowI (fftSize, dsp::WindowingFunction<float>::hann),
+    :   fftOrder(fftOrder_),
         action (fdAction)
     {
+        onFFTOrderChange();
     }
     
     FDThread (const FDThread&) = delete;
 
-    virtual ~FDThread()
-    {
-    }
+    virtual ~FDThread() = default;
     
     // Prepare for play function
     void prepare (double newSampleRate, int bufferSize)
     {
+        // Prepare action
+        action->prepare (newSampleRate, bufferSize);
+
         // releaseResources
         releaseResources();
     }
@@ -36,6 +34,9 @@ public:
         {
             // Clear buffers
             clearBuffers();
+            
+            // Release action
+            action->releaseResources();
             
             // Reset counters
             c = 0;
@@ -49,11 +50,41 @@ public:
     }
     
     // SETTERS
-    void setAction (FDAction* fdAction)
+    void setAll (int order, FDAction* fdAction)
     {
-        action = fdAction;
+        setFFTOrder(order);
+        setAction(fdAction);
     }
     
+    void setFFTOrder (int newFFTOrder) noexcept
+    {
+        fftOrder = newFFTOrder;
+        onFFTOrderChange();
+    }
+    
+    void setFFTOrderSafe (int newFFTOrder) noexcept
+    {
+        if (newFFTOrder < fftLimits::minOrder)
+        {
+            fftOrder = fftLimits::minOrder;
+        }
+        else if (newFFTOrder > fftLimits::maxOrder)
+        {
+            fftOrder = fftLimits::maxOrder;
+        }
+        else
+        {
+            fftOrder = newFFTOrder;
+        }
+        
+        onFFTOrderChange();
+    }
+
+    void setAction (FDAction* newAction)
+    {
+        action = newAction;
+    }
+
     // PROCESSING FUNCTIONS
     void processSampleMono (float input, float& output);
     void processSampleStereo (float inputL, float inputR, float& outputL, float& outputR);
@@ -61,21 +92,17 @@ public:
 private:
     // internal
     bool resourcesReleased = false;
-    
-    // FFT
-    static const int maxFFTOrder = 12;
-    static const int maxFFTSize = 1 << maxFFTOrder;
 
-    int fftOrder = 10;
-    int fftSize = 1 << fftOrder;
-    int fftDataSize = fftSize * 2;
+    int fftOrder = fftDefault::order;
+    int fftSize = fftDefault::size;
+    int fftDataSize = fftDefault::dataSize;
     
-    dsp::FFT forwardFFT, inverseFFT;
-    dsp::WindowingFunction<float> windowF, windowI;
+    std::unique_ptr<dsp::FFT> forwardFFT, inverseFFT;
+    std::unique_ptr<WindowFunc> windowF, windowI;
     
-    float fifo[maxFFTSize];
-    float fftData[maxFFTSize * 2];
-    float outputData[maxFFTSize];
+    float fifo[fftLimits::maxSize];
+    float fftData[fftLimits::maxDataSize];
+    float outputData[fftLimits::maxSize];
 
     int fifoIndex = 0;
     int c = 0;
@@ -83,9 +110,6 @@ private:
     
     // action
     FDAction* action;
-    
-    // DAW transport state object
-    AudioPlayHead::CurrentPositionInfo currentPositionInfo;
     // =========================================================
     
     void pushNextSampleIntoFifo (float input) noexcept
@@ -108,16 +132,22 @@ private:
     void clearBuffers() noexcept
     {
         // Clear fftData
-        for (int sample = 0; sample < fftDataSize; sample++)
-        {
-            fftData[sample] = 0;
-        }
+        zeromem (fftData, sizeof (fftData));
         
         // Clear output data
-        for (int sample = 0; sample < fftSize; sample++)
-        {
-            outputData[sample] = 0;
-        }
+        zeromem (outputData, sizeof (outputData));
+    }
+
+    void onFFTOrderChange() noexcept
+    {
+        fftSize = 1 << fftOrder;
+        fftDataSize = fftSize * 2;
+        
+        windowF = std::make_unique<WindowFunc>(fftSize, WindowFunc::hamming);
+        windowI = std::make_unique<WindowFunc>(fftSize, WindowFunc::hamming);
+        
+        forwardFFT = std::make_unique<dsp::FFT>(fftOrder);
+        inverseFFT = std::make_unique<dsp::FFT>(fftOrder);
     }
 };
 
