@@ -12,25 +12,21 @@ public:
     {
     }
     
-    void processMono (const float realIn, const float imagIn, float& realOut, float& imagOut) override
+    virtual void processMono (ComplexSignal& signal) override
     {
-        const Complex magn = getMagnitude (realIn, imagIn);
+        const Complex magn = getMagnitude (signal.real(), signal.imag());
         const Complex phase = random.nextFloat() * 2.0 - 1.0;
         
-        const Complex signal = synthesize (magn, phase);
-        
-        realOut = signal.real();
-        imagOut = signal.imag();
+        signal.set (synthesize (magn, phase));
     }
 
-    virtual void processStereo (const float realInL, const float realInR,
-                                const float imagInL, const float imagInR,
-                                float& realOutL, float& realOutR,
-                                float& imagOutL, float& imagOutR ) override
+    virtual void processStereo (ComplexSignalStereo& signal) override
     {
-        processMono(realInL, imagInL, realOutL, imagOutL);
-        processMono(realInR, imagInR, realOutR, imagOutR);
+        processMono (signal.left);
+        processMono (signal.right);
     }
+    
+    
 private:
     Random random;
 };

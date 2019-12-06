@@ -8,8 +8,7 @@ public:
     FDThread() = default;
     
     FDThread (int fftOrder_, FDAction* fdAction)
-    :   fftOrder(fftOrder_),
-        action (fdAction)
+    :   fftOrder(fftOrder_)
     {
         onFFTOrderChange();
     }
@@ -21,39 +20,27 @@ public:
     // Prepare for play function
     void prepare (double newSampleRate, int bufferSize)
     {
-        // Prepare action
-        action->prepare (newSampleRate, bufferSize);
-
         // releaseResources
         releaseResources();
     }
     
     void releaseResources()
     {
-        if (!resourcesReleased)
-        {
-            // Clear buffers
-            clearBuffers();
-            
-            // Release action
-            action->releaseResources();
-            
-            // Reset counters
-            c = 0;
-            
-            // Reset flags
-            nextFFTBlockReady = false;
-            
-            // Set resourcesReleased to true
-            resourcesReleased = true;
-        }
+        // Clear buffers
+        clearBuffers();
+        
+        // Reset counters
+        c = 0;
+        
+        // Reset flags
+        nextFFTBlockReady = false;
     }
     
     // SETTERS
-    void setAll (int order, FDAction* fdAction)
+    void setAll (int order, FDActionMono fdActionMono, FDActionStereo fdActionStereo)
     {
         setFFTOrder(order);
-        setAction(fdAction);
+        setAction(fdActionMono, fdActionStereo);
     }
     
     void setFFTOrder (int newFFTOrder) noexcept
@@ -80,9 +67,10 @@ public:
         onFFTOrderChange();
     }
 
-    void setAction (FDAction* newAction)
+    void setAction (FDActionMono mono, FDActionStereo stereo)
     {
-        action = newAction;
+        actionMono = mono;
+        actionStereo = stereo;
     }
 
     // PROCESSING FUNCTIONS
@@ -90,9 +78,6 @@ public:
     void processSampleStereo (float inputL, float inputR, float& outputL, float& outputR);
     
 private:
-    // internal
-    bool resourcesReleased = false;
-
     int fftOrder = fftDefault::order;
     int fftSize = fftDefault::size;
     int fftDataSize = fftDefault::dataSize;
@@ -109,7 +94,8 @@ private:
     bool nextFFTBlockReady = false;
     
     // action
-    FDAction* action;
+    FDActionMono actionMono;
+    FDActionStereo actionStereo;
     // =========================================================
     
     void pushNextSampleIntoFifo (float input) noexcept

@@ -10,6 +10,8 @@ public:
         threads = new FDThread[numThreads]();
     }
     
+    FDProcessor (const FDProcessor&) = delete;
+    
     ~FDProcessor()
     {
         delete [] threads;
@@ -72,12 +74,12 @@ public:
     }
     
     // SETTERS ====================================================================
-    void setAll (int order, FDAction** actions, int numThreads)
+    void setAll (int order, int numThreads, FDActionMono actionMono, FDActionStereo actionStereo)
     {
         setFFTOrder (order);
         
         // NB! includes setting actions
-        setNumThreads (numThreads, actions);
+        setNumThreads (numThreads, actionMono, actionStereo);
     }
 
     void setFFTOrder (int order) noexcept
@@ -88,22 +90,19 @@ public:
         
         updateSizes();
     
-        for (int i = 0; i < numThreads; i++)
-        {
-            threads[i].setFFTOrder (fftOrder);
-        }
+        forEachThread ([&] (FDThread& thread, int index) -> void {
+            thread.setFFTOrder (fftOrder);
+        });
     }
     
-    void setAction (FDAction** actions)
+    void setAction (FDActionMono actionMono, FDActionStereo actionStereo)
     {
-        for (int i = 0; i < numThreads; i++)
-        {
-            actions[i]->prepare(sampleRate, bufferSize);
-            threads[i].setAction (actions[i]);
-        }
+        forEachThread ([&] (FDThread& thread, int index) -> void {
+            thread.setAction (actionMono, actionStereo);
+        });
     }
     
-    void setNumThreads (int newNumThreads, FDAction** actions)
+    void setNumThreads (int newNumThreads, FDActionMono actionMono, FDActionStereo actionStereo)
     {
         if (numThreads < 1)
         {
@@ -120,7 +119,7 @@ public:
         delete [] threads;
         threads = new FDThread[numThreads]();
         
-        initThreads (actions);
+        initThreads (actionMono, actionStereo);
         prepareThreads();
     }
     
@@ -183,11 +182,16 @@ private:
         outputData.increment();
     }
     
-    void initThreads (FDAction** actions)
+    void initThreads (FDActionMono actionMono, FDActionStereo actionStereo)
+    {
+        forEachThread ([&] (FDThread& thread, int index) -> void {
+            thread.setAll (fftOrder, actionMono, actionStereo);
+        });
+    }
+    
+    void forEachThread (std::function<void (FDThread& thread, int index)> callback)
     {
         for (int i = 0; i < numThreads; i++)
-        {
-            threads[i].setAll(fftOrder, actions[i]);
-        }
+            callback (threads[i], i);
     }
 };
