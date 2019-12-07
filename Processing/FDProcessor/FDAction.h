@@ -50,17 +50,17 @@ public:
     virtual void processMono (ComplexSignal& signal) = 0;
     virtual void processStereo (ComplexSignalStereo& signal) = 0;
     
-    FDActionMono getMonoFunc()
+    FDActionMono getMono()
     {
-        return [&] (ComplexSignal& signal)
+        return [&] (ComplexSignal& signal) mutable
         {
             this->processMono (signal);
         };
     }
     
-    FDActionStereo getStereoFunc()
+    FDActionStereo getStereo()
     {
-        return [&] (ComplexSignalStereo& signal)
+        return [&] (ComplexSignalStereo& signal) mutable
         {
             this->processStereo (signal);
         };
@@ -81,4 +81,33 @@ protected:
     {
         return magnitude * exp (1i * phase);
     }
+};
+
+template <typename T, const int arrLength>
+class StaticArr
+{
+public:
+    StaticArr() = default;
+    StaticArr (const StaticArr&) = delete;
+    ~StaticArr() = default;
+
+    int length() const
+    {
+        return _length;
+    }
+
+    void forEach (std::function<void(T& elm, int index)> callback)
+    {
+        for (int i = 0; i < _length; i++)
+            callback (elms[i], i);
+    }
+
+    T &operator[] (int index)
+    {
+        return elms[index];
+    }
+
+private:
+    const int _length = arrLength;
+    T elms[arrLength];
 };

@@ -130,7 +130,7 @@ private:
         fftDataSize = fftSize * 2;
         
         windowF = std::make_unique<WindowFunc>(fftSize, WindowFunc::hamming);
-        windowI = std::make_unique<WindowFunc>(fftSize, WindowFunc::hamming);
+        windowI = std::make_unique<WindowFunc>(fftSize, WindowFunc::blackman);
         
         forwardFFT = std::make_unique<dsp::FFT>(fftOrder);
         inverseFFT = std::make_unique<dsp::FFT>(fftOrder);
