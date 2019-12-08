@@ -20,6 +20,7 @@
 typedef std::complex<double> Complex;
 typedef dsp::WindowingFunction<float> WindowFunc;
 using namespace std::complex_literals;
+
 const double two_pi = double_Pi * 2.0;
 //==================================================================================
 // my utilities

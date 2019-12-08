@@ -5,15 +5,11 @@
 class FDProcessor
 {
 public:
-    FDProcessor()
-    {
-        threads = new FDThread[numThreads]();
-    }
+    FDProcessor() = default;
     
-    ~FDProcessor()
-    {
-        delete [] threads;
-    }
+    FDProcessor (const FDProcessor&) = delete;
+    
+    ~FDProcessor() = default;
     
     void prepare (double newSampleRate, int newBufferSize)
     {
@@ -31,10 +27,10 @@ public:
         clearBuffers();
 
         // Release threads
-        for (int i = 0; i < numThreads; i++)
+        threads.forEach ([] (FDThread& thread, int index)
         {
-            threads[i].releaseResources();
-        }
+            thread.releaseResources();
+        });
 
         isReady = false;
     }
@@ -72,12 +68,13 @@ public:
     }
     
     // SETTERS ====================================================================
-    void setAll (int order, FDAction** actions, int numThreads)
+    void setAll (int order, int numThreads,
+                 std::function <FDActionMono (int index)> getMono,
+                 std::function <FDActionStereo (int index)> getStereo)
     {
         setFFTOrder (order);
-        
-        // NB! includes setting actions
-        setNumThreads (numThreads, actions);
+        setNumThreads (numThreads);
+        setAction (getMono, getStereo);
     }
 
     void setFFTOrder (int order) noexcept
@@ -87,41 +84,34 @@ public:
         fftOrder = order;
         
         updateSizes();
-    
-        for (int i = 0; i < numThreads; i++)
-        {
-            threads[i].setFFTOrder (fftOrder);
-        }
+        setThreadsFFTOrder();
     }
     
-    void setAction (FDAction** actions)
+    void setAction (std::function <FDActionMono (int index)> getMono,
+                    std::function <FDActionStereo (int index)> getStereo)
     {
-        for (int i = 0; i < numThreads; i++)
+        // Copy actions funcs to the local static array
+        for (int i = 0; i < maxNumThreads; i++)
         {
-            actions[i]->prepare(sampleRate, bufferSize);
-            threads[i].setAction (actions[i]);
+            actionsMono[i] = getMono (i);
+            actionsStereo[i] = getStereo (i);
         }
+
+        setThreadsAction();
     }
     
-    void setNumThreads (int newNumThreads, FDAction** actions)
+    void setNumThreads (int newNumThreads)
     {
         if (numThreads < 1)
         {
             numThreads = 1;
         }
-        else if (numThreads > fftLimits::maxNumThreads)
+        else if (numThreads > maxNumThreads)
         {
-            numThreads = fftLimits::maxNumThreads;
+            numThreads = maxNumThreads;
         }
         
         updateHopSize();
-        
-        // Resize threads
-        delete [] threads;
-        threads = new FDThread[numThreads]();
-        
-        initThreads (actions);
-        prepareThreads();
     }
     
 private:
@@ -133,6 +123,7 @@ private:
     bool isReady = false;
     
     // FFT
+    static const int maxNumThreads = fftLimits::maxNumThreads;
     int numThreads = fftDefault::numThreads;
     
     int fftOrder = fftDefault::order;
@@ -144,8 +135,12 @@ private:
     CircularBuffer<float> threadsData;
     CircularBuffer<float> outputData;
 
+    // Actions
+    StaticArr<FDActionMono, maxNumThreads> actionsMono;
+    StaticArr<FDActionStereo, maxNumThreads> actionsStereo;
+
     // Threads
-    FDThread* threads;
+    StaticArr<FDThread, maxNumThreads> threads;
     
     // Private member functions =================================================
     void updateHopSize()
@@ -159,13 +154,29 @@ private:
         updateHopSize();
         delaySamples = pluginDelaySamples - windowSize;
     }
-    
+
     void prepareThreads()
     {
-        for (int i = 0; i < numThreads; i++)
+        threads.forEach ([=] (FDThread& thread, int index)
         {
-            threads[i].prepare (sampleRate, bufferSize);
-        }
+            thread.prepare (sampleRate, bufferSize);
+        });
+    }
+
+    void setThreadsFFTOrder()
+    {
+        threads.forEach ([=] (FDThread& thread, int index)
+        {
+            thread.setFFTOrder (fftOrder);
+        });
+    }
+
+    void setThreadsAction()
+    {
+        threads.forEach ([&] (FDThread& thread, int index)
+        {
+            thread.setAction (actionsMono[index], actionsStereo[index]);
+        });
     }
     
     // Processing
@@ -181,13 +192,5 @@ private:
         inputData.increment();
         threadsData.increment();
         outputData.increment();
-    }
-    
-    void initThreads (FDAction** actions)
-    {
-        for (int i = 0; i < numThreads; i++)
-        {
-            threads[i].setAll(fftOrder, actions[i]);
-        }
     }
 };

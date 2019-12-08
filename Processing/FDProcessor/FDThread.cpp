@@ -3,15 +3,10 @@
 
 void FDThread::processSampleMono (float input, float& output)
 {
-    // reset flag
-    resourcesReleased = false;
 }
 
 void FDThread::processSampleStereo (float inputL, float inputR, float& outputL, float& outputR)
 {
-    // reset flag
-    resourcesReleased = false;
-    
     // Update counters
     if (c > fftSize - 1)
     {
@@ -31,14 +26,14 @@ void FDThread::processSampleStereo (float inputL, float inputR, float& outputL, 
         
         for (int bin = 0; bin < fftSize; bin++)
         {
-            const float realIn = fftData[bin];
-            const float imagIn = fftData[bin + 1];
+            const float real = fftData[bin];
+            const float imag = fftData[bin + 1];
             
-            float realOut, imagOut = 0.0f;
-            action->processMono(realIn, imagIn, realOut, imagOut);
+            ComplexSignal processed {real, imag};
+            actionMono (processed);
 
-            fftData[bin] = realOut;
-            fftData[bin] = imagOut;
+            fftData[bin] = processed.real();
+            fftData[bin] = processed.imag();
         }
         
         windowI->multiplyWithWindowingTable(fftData, fftSize);

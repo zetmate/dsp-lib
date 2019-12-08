@@ -1,57 +1,113 @@
 #pragma once
 #include "/Users/Macbook/Desktop/juce-dev/libs/zetlib/Utility/Utility.h"
 
+struct ComplexSignal
+{
+public:
+    ComplexSignal (float real, float imag)
+        : _real(real), _imag(imag)
+    {
+    }
+    
+    void set (float real, float imag)
+    {
+        _real = real;
+        _imag = imag;
+    }
+
+    void set (const Complex& other)
+    {
+        _real = other.real();
+        _imag = other.imag();
+    }
+    
+    float real() const { return _real; }
+    float imag() const { return _imag; }
+private:
+    float _real;
+    float _imag;
+};
+
+struct ComplexSignalStereo
+{
+    ComplexSignal left;
+    ComplexSignal right;
+};
+
+using FDActionMono = std::function<void (ComplexSignal&)>;
+using FDActionStereo = std::function<void (ComplexSignalStereo&)>;
+
 class FDAction
 {
 public:
     FDAction() = default;
-    
+
     FDAction (const FDAction&) = delete;
-    
+
     virtual ~FDAction() = default;
-    
+
     // Pure virtual
-    virtual void processMono (const float realIn, const float imagIn,
-                              float& realOut, float& imagOut) = 0;
+    virtual void processMono (ComplexSignal& signal) = 0;
+    virtual void processStereo (ComplexSignalStereo& signal) = 0;
     
-    virtual void processStereo (const float realInL, const float realInR,
-                                const float imagInL, const float imagInR,
-                                float& realOutL, float& realOutR,
-                                float& imagOutL, float& imagOutR ) = 0;
-
-    // Virtual
-    virtual void prepare (double newSampleRate, int bufferSize)
+    FDActionMono getMono()
     {
-    }
-
-    virtual void releaseResources()
-    {
-        resourcesReleased = true;
+        return [&] (ComplexSignal& signal) mutable
+        {
+            this->processMono (signal);
+        };
     }
     
-    // Getters
-    FDAction* getPointerToMe()
+    FDActionStereo getStereo()
     {
-        return this;
+        return [&] (ComplexSignalStereo& signal) mutable
+        {
+            this->processStereo (signal);
+        };
     }
 
 protected:
-    // Properties
-    bool resourcesReleased = false;
-
-    // Methods
     const Complex getMagnitude (float real, float imag)
     {
-        return sqrtf(powf(real, 2) + powf(imag, 2));
+        return sqrtf (powf (real, 2) + powf (imag, 2));
     }
     
     const Complex getPhase (const float real, const float imag)
     {
-        return atan2(imag, real);
+        return atan2 (imag, real);
     }
     
     const Complex synthesize (const Complex magnitude, const Complex phase)
     {
-        return magnitude * exp(1i * phase);
+        return magnitude * exp (1i * phase);
     }
+};
+
+template <typename T, const int arrLength>
+class StaticArr
+{
+public:
+    StaticArr() = default;
+    StaticArr (const StaticArr&) = delete;
+    ~StaticArr() = default;
+
+    int length() const
+    {
+        return _length;
+    }
+
+    void forEach (std::function<void(T& elm, int index)> callback)
+    {
+        for (int i = 0; i < _length; i++)
+            callback (elms[i], i);
+    }
+
+    T &operator[] (int index)
+    {
+        return elms[index];
+    }
+
+private:
+    const int _length = arrLength;
+    T elms[arrLength];
 };
