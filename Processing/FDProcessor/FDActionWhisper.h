@@ -15,7 +15,7 @@ public:
     virtual void processMono (ComplexSignal& signal) override
     {
         const Complex magn = getMagnitude (signal.real(), signal.imag());
-        const Complex phase = random.nextFloat() * 2.0 - 1.0;
+        const Complex phase = random.nextFloat() * two_pi - float_Pi;
         
         signal.set (synthesize (magn, phase));
     }
