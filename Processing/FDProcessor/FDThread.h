@@ -37,10 +37,12 @@ public:
     }
     
     // SETTERS
-    void setAll (int order, FDActionMono fdActionMono, FDActionStereo fdActionStereo)
+    void setAll (int order, FDActionMono fdActionMono, FDActionStereo fdActionStereo,
+                  WindowFunc::WindowingMethod windowFuncType = WindowFunc::hann)
     {
-        setFFTOrder(order);
-        setAction(fdActionMono, fdActionStereo);
+        setFFTOrder (order);
+        setAction (fdActionMono, fdActionStereo);
+        setWindowType (windowFuncType);
     }
     
     void setFFTOrder (int newFFTOrder) noexcept
@@ -52,17 +54,11 @@ public:
     void setFFTOrderSafe (int newFFTOrder) noexcept
     {
         if (newFFTOrder < fftLimits::minOrder)
-        {
             fftOrder = fftLimits::minOrder;
-        }
         else if (newFFTOrder > fftLimits::maxOrder)
-        {
             fftOrder = fftLimits::maxOrder;
-        }
         else
-        {
             fftOrder = newFFTOrder;
-        }
         
         onFFTOrderChange();
     }
@@ -71,6 +67,12 @@ public:
     {
         actionMono = mono;
         actionStereo = stereo;
+    }
+    
+    void setWindowType (WindowFunc::WindowingMethod windowFuncType)
+    {
+        windowType = windowFuncType;
+        initWindows();
     }
 
     // PROCESSING FUNCTIONS
@@ -85,13 +87,15 @@ private:
     std::unique_ptr<dsp::FFT> forwardFFT, inverseFFT;
     std::unique_ptr<WindowFunc> windowF, windowI;
     
-    float fifo[fftLimits::maxSize];
-    float fftData[fftLimits::maxDataSize];
-    float outputData[fftLimits::maxSize];
+    float fifo [fftLimits::maxSize];
+    float fftData [fftLimits::maxDataSize];
+    float outputData [fftLimits::maxSize];
 
     int fifoIndex = 0;
     int c = 0;
     bool nextFFTBlockReady = false;
+    
+    WindowFunc::WindowingMethod windowType;
     
     // action
     FDActionMono actionMono;
@@ -123,17 +127,22 @@ private:
         // Clear output data
         zeromem (outputData, sizeof (outputData));
     }
+    
+    void initWindows() noexcept
+    {
+        windowF = std::make_unique<WindowFunc> (fftSize, windowType);
+        windowI = std::make_unique<WindowFunc> (fftSize, windowType);
+    }
 
     void onFFTOrderChange() noexcept
     {
         fftSize = 1 << fftOrder;
         fftDataSize = fftSize * 2;
         
-        windowF = std::make_unique<WindowFunc>(fftSize, WindowFunc::hamming);
-        windowI = std::make_unique<WindowFunc>(fftSize, WindowFunc::blackman);
+        initWindows();
         
-        forwardFFT = std::make_unique<dsp::FFT>(fftOrder);
-        inverseFFT = std::make_unique<dsp::FFT>(fftOrder);
+        forwardFFT = std::make_unique<dsp::FFT> (fftOrder);
+        inverseFFT = std::make_unique<dsp::FFT> (fftOrder);
     }
 };
 

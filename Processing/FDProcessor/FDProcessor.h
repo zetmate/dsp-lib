@@ -70,11 +70,13 @@ public:
     // SETTERS ====================================================================
     void setAll (int order, int numThreads,
                  std::function <FDActionMono (int index)> getMono,
-                 std::function <FDActionStereo (int index)> getStereo)
+                 std::function <FDActionStereo (int index)> getStereo,
+                 WindowFunc::WindowingMethod windowType = WindowFunc::hann)
     {
         setFFTOrder (order);
         setNumThreads (numThreads);
         setAction (getMono, getStereo);
+        setWindowType (windowType);
     }
 
     void setFFTOrder (int order) noexcept
@@ -112,6 +114,14 @@ public:
         }
         
         updateHopSize();
+    }
+    
+    void setWindowType (WindowFunc::WindowingMethod windowType)
+    {
+        threads.forEach ([=](FDThread& thread, int)
+        {
+            thread.setWindowType (windowType);
+        });
     }
     
 private:
