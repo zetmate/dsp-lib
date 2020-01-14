@@ -38,6 +38,31 @@ public:
         return n;
     }
     
+    /**  Fmod implementation that works with negative  value
+     */
+    static float fmodPro (double value, double range)
+    {
+        if (value < 0)
+        {
+            float normalized;
+            if (abs (value) > range)
+            {
+                float numCycles = abs (floor (value / range)) + 1;
+                normalized = range * numCycles + value;
+            }
+            else
+            {
+                normalized = value;
+            }
+
+            return fmod (range + normalized, range);
+        }
+        else
+        {
+            return fmodf (value, range);
+        }
+    }
+    
 //    static bool compareTwoDoubles (double x, double y, int numSignificantDigits)
 //    {
 //        return roundToInt (x * pow (10, numSignificantDigits))
