@@ -40,7 +40,7 @@ public:
     
     /**  Fmod implementation that works with negative  value
      */
-    static float fmodPro (double value, double range)
+    static float fmodPro (float value, float range)
     {
         if (value < 0)
         {
